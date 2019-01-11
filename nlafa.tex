@@ -1,0 +1,91 @@
+\documentclass[11pt]{report}
+%---- defitions ----
+\def\Author{Andreas Bock\\[0.3cm] Imperial College London}
+% <Add more defitions here>
+%-------------------
+
+%---- packages ----
+\usepackage[]{amsmath}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{moreverb}
+\usepackage{enumitem}
+\usepackage{amsfonts}
+\usepackage{titlesec}
+\usepackage{url}
+
+%---- settings ----
+\usepackage[hmarginratio=1:1,margin=3.2cm,top=26mm,bottom=24mm]{geometry} % Document margins
+% Set indentation
+\setlength{\parindent}{0in}
+
+\titleclass{\subsubsubsection}{straight}[\subsection]
+
+\newcounter{subsubsubsection}[subsubsection]
+
+\renewcommand\thesubsubsubsection{\thesubsubsection.\arabic{subsubsubsection}}
+\renewcommand\theparagraph{\thesubsubsubsection.\arabic{paragraph}}
+\renewcommand\thesubparagraph{\theparagraph.\arabic{subparagraph}}
+
+\titleformat{\subsubsubsection}
+  {\normalfont\normalsize\bfseries}{\thesubsubsubsection}{1em}{}
+  \titlespacing*{\subsubsubsection}
+  {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+  \makeatletter
+  \renewcommand\paragraph{\@startsection{paragraph}{5}{\z@}%
+    {3.25ex \@plus1ex \@minus.2ex}%
+      {-1em}%
+        {\normalfont\normalsize\bfseries}}
+        \renewcommand\subparagraph{\@startsection{subparagraph}{6}{\parindent}
+          {3.25ex \@plus1ex \@minus .2ex}%
+            {-1em}%
+              {\normalfont\normalsize\bfseries}}
+              \def\toclevel@subsubsubsection{4}
+              \def\toclevel@paragraph{5}
+              \def\toclevel@paragraph{6}
+              \def\l@subsubsubsection{\@dottedtocline{4}{7em}{4em}}
+              \def\l@paragraph{\@dottedtocline{5}{10em}{5em}}
+              \def\l@subparagraph{\@dottedtocline{6}{14em}{6em}}
+              \@addtoreset{subsubsubsection}{section}
+              \@addtoreset{subsubsubsection}{subsection}
+              \@addtoreset{paragraph}{subsubsubsection}
+              \makeatother
+
+              \setcounter{secnumdepth}{6}
+              \setcounter{tocdepth}{6}
+
+% Theorems
+\newcounter{mythm}
+\newcounter{mydef}
+\newcounter{mylem}
+\newcounter{myrem}
+\newcounter{myexa}
+\newcounter{mypro}
+\newcounter{mycol}
+\newcounter{myass}
+\newcounter{mysketch}
+\newtheorem{theorem}[mythm]{Theorem}
+\newtheorem{definition}[mydef]{Definition}
+\newtheorem{remark}[myrem]{Remark}
+\newtheorem{lemma}[mylem]{Lemma}
+\newtheorem{example}[myexa]{Example}
+\newtheorem{proposition}[mypro]{Proposition}
+\newtheorem{corollary}[mycol]{Corollary}
+\newtheorem{assumption}[myass]{Assumption}
+\newtheorem{sketch}[mysketch]{Proof Sketch}
+%-------------------
+\begin{document}
+\title{Notes on Functional Analysis \& Numerical Linear Algebra}
+\author{\Author}
+\date{\today}
+\maketitle
+\tableofcontents
+\newpage
+
+\input{introduction}
+\input{functional_analysis}
+\input{numerical_linear_algebra}
+
+\end{document}

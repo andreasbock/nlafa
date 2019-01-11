@@ -1,0 +1,254 @@
+\chapter{Numerical Analysis}
+
+\section{Pillars of Numerical Analysis}
+
+In the following we let $u$ denote the exact solution and $u_h$ the numerical approximation to
+some equation $L u = f$
+
+\begin{itemize}
+\item \textbf{Convergence}: If $u - u_h \rightarrow 0$ as $h\rightarrow 0$
+\item \textbf{Consistency}: If $L_h u_h - f_h \rightarrow 0$ as $h\rightarrow 0$
+\item \textbf{Stability}: Does perturbations to initial conditions cause a 
+    proportional perturbation in the solution, independent of $h$?
+\end{itemize}
+
+We can summarise the properties above in the Fundamental Theorem of Numerical Analysis:
+\begin{theorem}\label{theorem:ftnum}
+A numerical scheme that is consistent and stable is convergent.
+\end{theorem}
+
+\subsection{Measuring convergence, consistency and stability}
+
+Taken from \url{http://www-users.math.umn.edu/~arnold/talks/feng-kang-print.pdf}:
+Let $r_h : V \rightarrow V_h$ denote the restriction operator.
+
+\begin{itemize}
+\item $\| r_h u - u_h \|$ measures the \textbf{discretisation error}
+\item $\| L_h u_h - f_h \|$ measures the \textbf{consistency error}
+\item $\| L_h^{-1}\|$ measures the \textbf{stability constant}
+\end{itemize}
+
+So, theorem \ref{theorem:ftnum} is a consequence of these definitions since
+\[
+\| r_h u - u_h \|\leq \| L_h^{-1}\|\| L_h r_h u - f_h \|
+\]
+
+\section{Solving Linear Systems}
+
+Unles otherwise stated we are solving $Ax=b$.\\
+
+Two ways of doing this: direct or iterative methods.
+
+\subsection{Direct Methods}
+
+\subsection{Iterative Approaches}
+\subsubsection{Jacobi Method}
+
+This method works by decomposing $A$ into its diagonal, $D$ and the
+remaining entries $R$. A Jacobi iteration is defined as:
+\[
+x^{k+1} = D^{-1}1 (b  - R x^k), \qquad k\geq 0
+\]
+
+The key thing to note here is that it is necessary to store the previous
+vector (and not overwrite it!)
+
+\subsubsection{Gauss-Seidel}
+
+This method also works by decomposition of $A$, but into a lower and upper
+triangular part $L$ and $U$, respectively. The Gauss-Seidel iteration is
+then defined as:
+\[
+x^{k+1} = L^{-1}1 (b  - U x^k), \qquad k\geq 0
+\]
+
+Note that this CANNOT be parallelised as efficiently as Jacobi (why?).
+
+\subsubsection{Krylov Subspace Methods}
+
+% What it is
+We want to approach the linear system $Ax=b$ in a more memory-efficient manner.
+
+% Convergence and relation to eigenvalues
+Conditioning of a linear system roughly states how "bad" a solution will be as a result of approximation.
+The condition number of an operator measures by how much the solution $x$ will change as a resut of $b$.
+This is before round-off errors or anything!\\
+
+
+\subsubsubsection{Conjugate Gradient}
+
+When $A$ is symmetric (Hermitian) then minimiser of $f(x) = \frac12 x^T Ax + x^T b$ satisfies
+$Ax=b$.
+
+
+\subsubsubsection{Convergence}
+
+The condition number is related to convergence of iterative methods via Chebyshev polynomials (see Krylov solver below!)
+
+relation with eigenvalues: We have a bound that says that the error in the k\textsuperscript{th} iteration is bounded from above
+by the number of distinct eigenvalues. In particular, if all eigenvalues lie in the interval $[\lambda_{min},\,\lambda_{max}]$ then we
+have 
+\[
+\frac{\|x-x_k\|}{\|x-x_0\|} \leq 2 \Big(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\Big)^k
+\]
+where $\kappa = \frac{\lambda_{max}}{\lambda_{min}}$.
+\underline{\emph{This is the connection with condition number!}}
+
+
+\subsection{Block Methods}
+
+\begin{itemize}
+\item \textbf{Block Jacobi}: Apply the classic Jacobi preconditioning to each partition of the variables i.e. use block-diagonal instead of diagonal.
+Another variant is using several diagonals (e.g. tridiagonal).\\
+Each processor solves its own subsystem, and there is no communication between the processors. Since this strategy neglects the global/implicit properties of the linear system, only a limited improvement in the number of iterations can result. On the other hand, this type of method is very parallel.
+\item \textbf{Multiplicative Schwarz}: In MS, the domain is divided into overlapping subdomains on which the PDE is solved. The interior boundary conditions are
+simply the interior values in the neighbouring domains.
+\item \textbf{Additive Schwarz}: %$M_{AS}^{-1} =\sum_{j=1}^J R^T_j A^{-1} R_j$.
+As in the Block Jacobi method, each processor solves a local subsystem. However, the local system is now augmented to include bordering variables, which belong to other processors. A certain amount of communication is now necessary, and the convergence improvement can by much higher. In contrast to MS, AS lends itself better to parallel implementation. This is because we use different interior boundary conditions. In MS, we
+just apply the values of the most recent updated neighbour as artificial BC. In AS, we take the previous iteration's values on neighbouring subdomains and their average
+is set as the artificial boundary condition.\\
+
+Mathematically we can write an AS iteration in residual form as follows:
+\[
+u^n = u^{n-1} + \sum_{i=1}^P R^T_i L^{-1}_i R_i (f - L u^{n-1})
+\]
+where $P$ is the number of patches, and $R$ the restriction operator.\\
+
+\textbf{Is there \emph{any} difference between block Jacobi and AS?}
+\end{itemize}
+
+The next section describes how we can multiply the equation $Ax=b$ with another matrix to better the
+conditioning of the overall system. We shall also see hwo some of the methods so far can actually
+be used a preconditioner.
+
+\section{Preconditioning}
+
+We just saw that the convergence of Krylov subspace methods is very dependent on the 
+eigenvalues of the linear operator $A$.\\
+
+Preconditioning falls into two categories. Let $P$ be a preconditioner:
+\begin{itemize}
+\item \textbf{Left preconditioning}: We solve $P^{-1}(Ax - b) = 0$.
+\item \textbf{Right preconditioning}: We solve $A P^{-1} P x = b$ (i.e. first solving $A P^{-1} y = b$ and then $Px = y$).
+\end{itemize}
+
+\textbf{The point is that $P^{-1}A$ has smaller conditioner number than A!}\\
+
+We provide a list of common preconditioners
+\begin{itemize}
+\item \textbf{Jacobi}: We select $P = \text{diag} A$.
+\item \textbf{Incomplete Cholesky or LU factorisation}:
+\item \textbf{Incomplete LU factorisation}:
+\end{itemize}
+
+\subsection{Block Preconditioning}
+
+% Block structure
+
+\begin{itemize}
+\item \textbf{Block Jacobi AKA Additive Schwarz}: Apply the classic Jacobi preconditioning to each partition of the variables i.e. use block-diagonal instead of diagonal.
+Another variant is using several diagonals (e.g. tridiagonal).\\
+Each processor solves its own subsystem, and there is no communication between the processors. Since this strategy neglects the global/implicit properties of the linear system, only a limited improvement in the number of iterations can result. On the other hand, this type of method is very parallel.
+\item \textbf{Schwarz (additive/multiplicative)}: Previously, we saw Schwarz methods for solving a linear system of equations (possibly in parallel). In
+fact, sometimes it is useful to apply these as a preconditioner while using some Krylov method to solve the actual problem. It is claimed that one iteration
+of of Schwarz can serve as an optimal preconditioner. Whether it be AS or MS, this preconditioner $B$ is sought by performing one iteration with a zero
+initial guess. For AS we write the preconditioned residual vector $v$ as
+\[
+v = Br = B(b-Ax) = \sum_{i=1}^P R^T_i L^{-1}_i R_i (b-Ax)
+\]
+while for MS we can write
+\begin{align*}
+u^{\frac{i}{P}} = u^{\frac{i-1}{P}} + R^T_i L^{-1}_i R_i (f - L u^{\frac{i-1}{P}}), \qquad i=1,\dots,P
+\end{align*}
+where $u^0 = 0$
+\end{itemize}
+
+See e.g. \texttt{http://www.netlib.org/utk/papers/iterative-survey/node6.html}\\
+
+So in AS we define $A_i = R_i A R_i^T$, where $R_i$ is the restriction operator
+and $A$ is the matrix in the linear system we want to solve. Inverting each $A_i$
+locally and re-applying the restriction operators from local to global we get a
+preconditioner agreeing with $A$ in dimension for the local system $i$:
+\begin{align*}
+B_i & = R_i^T A_i^{-1} R_i\\
+    & = R_i^T \big(R_i A_i R_i^T \big)^{-1} R_i
+\end{align*}
+
+For a global preconditioner $B$ all we have to do is a summation:
+\begin{align*}
+B = \sum_i B_i
+\end{align*}
+
+\begin{remark}[Schwarz versus linear solvers]
+Based on the descriptions above we can make a comparison between additive and multiplicative Schwarz and
+the linear solvers Gauss-Seidel and Jacobi. Specifically, we can view additive Schwarz as a block Jacobi
+method and multiplicative Schwarz as block Gauss-Seidel.\\
+The similarities can be seen as follows: additive Schwarz requires all the values of the previous iteration
+in order to update the boundary conditions but can be done in parallel. On the other hand, multiplicative
+Schwarz cannot be run in parallel but has the advantage of not requiring storage of all solutions!\\
+
+\textbf{\emph{NB:}} Although we compare Schwarz methods to linear solvers, they are not exactly the
+same because of the choice of overlap!
+\end{remark}
+
+\section{Multigrid}
+
+The idea behind multigrid is to generate a sequence of increasingly coarser meshes
+on which you solve a system of linear equations. Multigrid is used \emph{in conjunction}
+with a solver, although, as we shall see momentarity, in this context they are usually
+referred to as \emph{smoothers}.\\
+
+A property of the solvers we have seen so far is that they abate the residual starting
+with the 'highest peaks first'. In other words, high frequency error (oscillations) are
+removed first which is why the solvers are called smoothers. Supposing a smoother has removed
+some of the error on a fine mesh so that our error now looks like a very smooth function.
+If you were to take such a function and interpolate it onto a coarser mesh it would
+become more irregular, or non-smooth, as a result. Hence we can re-apply a smoother to
+remove even more error! Repeating this we now see what is meant above by 'generating a
+sequence of coarser meshes': Using the smoothing property of iterative methods we can
+remove error much faster than just applying an iterative method on a single mesh (assuming
+we know how to interpolate a numerical solution between meshes!)
+
+\subsection{Algebraic Multigrid}
+\subsection{Geometric Multigrid}
+
+\section{Definitions}
+
+\begin{itemize}
+\item \textbf{Schur complement}: this is basically a way to solve a system of linear equations of size $(p+q)^2$ by instead inverting a $p^2$ and $q^2$ matrix. ii)
+it can also be used in domain decomposition methods (which result in exactly a system of linear equations). This allows for parallelisation in order to find
+interior Dirichlet boundary conditions and then use this to solve each subproblem.
+\item \textbf{Conditioning (for $A$)}: We denote this $\kappa(A)$ which, depending on your context, is roughly the "derivative" of $A$.
+\begin{itemize}
+\item \textbf{Matrix-vector}: $\kappa(A) = \| A \| \frac{\|x\|}{\| Ax \|}$.
+\item \textbf{Matrix (this is called the \emph{condition number})}: $\kappa(A) = \| A^{-1} \| \| A \|$. If the norm is $\ell^2$, we write $\kappa(A) = \frac{\sigma_1}{\sigma_m}$
+\end{itemize}
+This is important because we essentially stand to lose $\log_{10} \kappa(A)$ digits when approximating a solution to $Ax=b$.
+The condition number is related to convergence of iterative methods via Chebyshev polynomials (see Krylov solver below!)
+\item \textbf{Solvers}:
+\begin{itemize}
+\item \textbf{Gauss-Seidel}: this is a kind of iterative solver for linear systems for which convergence is guaranteed for SPD matrices.
+\item \textbf{Jacobi}: this is also a solver for linear system, differing from Gauss-Seidel in that 
+\item \textbf{Successive Over-relaxation (SOR)}: generalisation of Gauss-Seidel but with faster convergence
+\item \textbf{Krylov}: see below!
+\end{itemize}
+\item \textbf{Stiffness}: Roughly means how "spread out" the eigenvalues are
+\item \textbf{Singular Value Decomposition (SVD)}: This is a kind of matrix factorisation that relies on a single observation/proof: \emph{the image of a unit circle under any matrix is a hyperellipse}. That is, for an operator $A$, we have $A = U \Sigma V^*$ where $U$, $V$ are unitary (conj. transp. is inverse) and $\Sigma$ is diagonal.
+Each of the factors on the right-hand side has a very interesting interpretation! $V^*$ rotates the right-singular vectors (i.e. its rows) to align with the unit sphere. Then, $\Sigma$ (the vector) scales the coordinates and finally $U$ rotates the ellipse.\\
+This is related to eigenvalues through
+\item \textbf{Factorisations}:
+\begin{itemize}
+\item \textbf{Cholesky}:
+\item \textbf{Schur}:
+\item \textbf{LU}:
+\item \textbf{QR}:
+\end{itemize}
+\end{itemize}
+
+\section{Misc}
+
+- Get to the bottom of inf-sup conditions and how they relate to GEVPs -
+Poincaré constant is the largest eigenvaue of Hx = C Dx? Since H = M + D (M is
+mass) then Dx = Mx/(C-1) so  1/(C-1) is EV of D up to constant M (dep on domain)
+- Estimating PC constant: consult min/max EVs of the operator ($G^-1 o E$)
+(operators stemming from each norm).
